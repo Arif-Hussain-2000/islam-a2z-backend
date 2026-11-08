@@ -1,11 +1,8 @@
-// const { configDotenv } = require("dotenv");
-
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
 require("dotenv").config();
-const dns = require('node:dns');
-dns.setServers(['8.8.8.8', '1.1.1.1']); // Google and Cloudflare DNS
+
 const bookRoutes = require("./routes/bookRoutes");
 const chapterRoutes = require("./routes/chapterRoutes");
 const hadithRoutes = require("./routes/hadithRoutes");
@@ -14,23 +11,40 @@ const cors = require("cors");
 
 app.use(express.json());
 app.use(cors());
-mongoose.connect(process.env.MONGO_URI).then(()=>{
-    console.log(" Mongodb Atlas Connected");
-}).catch((error) => {
-    console.log("MongoDB connection error:", error);
-});
-app.use("/api/books",bookRoutes);
-app.use("/api/chapters",chapterRoutes);
-app.use("/api/hadiths",hadithRoutes);
-app.use("/api/auth",authRoutes);
 
-app.get("/",(req,res)=>{
-res.json({
-    message:"Islam a2z is running "
-    });
+// Health check
+app.get("/", (req, res) => {
+  res.json({
+    message: "Islam A2Z is running",
+    database: mongoose.connection.readyState === 1
+      ? "Connected"
+      : "Disconnected"
+  });
 });
+
+app.use("/api/books", bookRoutes);
+app.use("/api/chapters", chapterRoutes);
+app.use("/api/hadiths", hadithRoutes);
+app.use("/api/auth", authRoutes);
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`server is running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000
+    });
+
+    console.log("MongoDB Atlas Connected");
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("Server startup error:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
