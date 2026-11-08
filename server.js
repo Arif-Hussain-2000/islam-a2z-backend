@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(cors());
 
 // Health check
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
     message: "Islam A2Z is running",
     database: mongoose.connection.readyState === 1
