@@ -12,13 +12,13 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cors());
 
-// Health check
+// Health check (Isse UptimeRobot properly track kar payega)
 app.get("/health", (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  // 1 = Connected, 2 = Connecting
   res.json({
     message: "Islam A2Z is running",
-    database: mongoose.connection.readyState === 1
-      ? "Connected"
-      : "Disconnected"
+    database: dbStatus === 1 ? "Connected" : dbStatus === 2 ? "Connecting" : "Disconnected"
   });
 });
 
@@ -29,22 +29,23 @@ app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 10000
-    });
+// 1. Server ko pehle start kar rahe hain taaki Render wake up ho sake aur crash na ho
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-    console.log("MongoDB Atlas Connected");
+// 2. Database connection background mein chalega aur auto-reconnect handle karega
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 45000, // Render ke slow wake up ke liye 45 seconds ka buffer
+  socketTimeoutMS: 45000,
+})
+.then(() => console.log("MongoDB Atlas Connected"))
+.catch((error) => {
+  console.error("Initial MongoDB connection error:", error);
+  // process.exit(1) ko hata diya taaki server crash na ho aur dubara connect karne ki koshish kare
+});
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
-  } catch (error) {
-    console.error("Server startup error:", error);
-    process.exit(1);
-  }
-};
-
-startServer();
+// Mongoose event listener jo reconnect status batayega
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected! Trying to reconnect...');
+});
