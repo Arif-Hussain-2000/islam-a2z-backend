@@ -18,22 +18,22 @@ const hadithSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    hadithTitle:{
+        type:String,
+    },
 
     // Always visible
     arabic: {
         type: String,
-        required: true
     },
 
     // User-selected language
     urdu: {
         type: String,
-        required: true
     },
 
     english: {
         type: String,
-        required: true
     },
     
 
